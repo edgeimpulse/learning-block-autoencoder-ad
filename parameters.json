@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "type": "machine-learning",
+    "info": {
+        "name": "Auto encoder AD",
+        "description": "Auto encoder based anomaly detection for time series",
+        "operatesOn": "anomaly_detection",
+        "indRequiresGpu": false
+    },
+    "parameters": []
+}
