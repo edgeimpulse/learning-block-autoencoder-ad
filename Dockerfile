@@ -24,19 +24,17 @@
 # # Install base packages
 # RUN apt update && apt install -y curl zip git lsb-release software-properties-common apt-transport-https vim wget
 
-# # Install Python 3.12
-# RUN add-apt-repository ppa:deadsnakes/ppa && \
-#     apt update && \
-#     apt install -y python3.12 python3-setuptools
-# RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12 && \
-#     python3.12 -m pip install --upgrade pip
+# # Install uv and Python 3.11
+# COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# RUN uv python install 3.11
 
 # # Copy Python requirements in and install them
 # COPY requirements.txt ./
-# RUN pip3.12 install -r requirements.txt
+# RUN uv pip install --system -r requirements.txt
 
 # # https://stackoverflow.com/questions/43147983/could-not-create-cudnn-handle-cudnn-status-internal-error
 # ENV TF_FORCE_GPU_ALLOW_GROWTH=true
+
 
 FROM alexeee/ae-ad-base
 
@@ -44,4 +42,4 @@ FROM alexeee/ae-ad-base
 COPY . ./
 
 # And tell us where to run the pipeline
-ENTRYPOINT ["python3.12", "-u", "train.py"]
+ENTRYPOINT ["python3", "-u", "train.py"]

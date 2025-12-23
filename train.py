@@ -139,7 +139,8 @@ threshold = np.max(train_mae_loss)
 print("Reconstruction error threshold: ", threshold)
 
 # Create a new model with the anomaly score layer baked in
-input_layer = layers.Input(shape=(x_np.shape[1], 1), name='input')
+# Use batch_size=1 to ensure static tensor shapes for TFLite delegate compatibility
+input_layer = layers.Input(shape=(x_np.shape[1], 1), batch_size=1, name='input')
 reconstruction = model(input_layer)
 anomaly_score = AnomalyScoreLayer(threshold=float(threshold), name='anomaly_score')([input_layer, reconstruction])
 
@@ -150,6 +151,7 @@ final_model.summary()
 
 # Save the model to disk
 converter = tf.lite.TFLiteConverter.from_keras_model(final_model)
+converter.experimental_new_converter = False  # Use legacy converter for older op versions
 tflite_model = converter.convert()
 with open(os.path.join(args.out_directory, 'model.tflite'), 'wb') as f:
     f.write(tflite_model)

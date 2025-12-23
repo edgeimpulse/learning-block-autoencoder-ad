@@ -10,10 +10,12 @@ pandas
 jupyter
 pydot
 boto3
-tensorflow==2.19.1
 keras-cv
 keras-nlp
 keras-tuner
-tf-keras==2.19.0
+numpy==1.26.4
+tensorflow==2.14
+tf-keras~=2.14
 keras-hub
 keras-rs-nightly
+
