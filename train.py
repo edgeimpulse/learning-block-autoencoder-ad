@@ -78,7 +78,7 @@ print("Training input shape: ", x_np.shape)
 # model architecture
 model = keras.Sequential(
     [
-        layers.Input(shape=(x_np.shape[1], 1)),
+        layers.Reshape((x_np.shape[1], 1), input_shape=(x_np.shape[1],)),
         layers.Conv1D(
             filters=32,
             kernel_size=7,
@@ -140,13 +140,15 @@ print("Reconstruction error threshold: ", threshold)
 
 # Create a new model with the anomaly score layer baked in
 # Use batch_size=1 to ensure static tensor shapes for TFLite delegate compatibility
-input_layer = layers.Input(shape=(x_np.shape[1], 1), batch_size=1, name='input')
-reconstruction = model(input_layer)
-anomaly_score = AnomalyScoreLayer(threshold=float(threshold), name='anomaly_score')([input_layer, reconstruction])
+input_layer = layers.Input(shape=(x_np.shape[1],), batch_size=1, name='input')
+reshaped_input = layers.Reshape((x_np.shape[1], 1))(input_layer)
+reconstruction = model(reshaped_input)
+anomaly_score = AnomalyScoreLayer(threshold=float(threshold), name='anomaly_score')([reshaped_input, reconstruction])
+output = layers.Reshape((1,))(anomaly_score)
 
 # Final model outputs a single anomaly score per sample
 # Score > 1.0 indicates anomaly, < 1.0 indicates normal
-final_model = keras.Model(inputs=input_layer, outputs=anomaly_score)
+final_model = keras.Model(inputs=input_layer, outputs=output)
 final_model.summary()
 
 # Save the model to disk
