@@ -1,4 +1,4 @@
-import argparse, os, sys, random, logging
+import argparse, os, sys, random, logging, math
 import numpy as np
 import pandas as pd
 import keras
@@ -76,9 +76,18 @@ callbacks = []
 print("Training input shape: ", x_np.shape)
 
 # model architecture
+# Calculate cropping needed: with two stride=2 layers, output may be larger than input
+# due to ceiling division. Crop the excess from the end to match original input size.
+INPUT_DIM = x_np.shape[1]
+# Compute decoder output size: encoder does ceil(ceil(n/2)/2), decoder multiplies by 4
+after_conv1 = math.ceil(INPUT_DIM / 2)
+after_conv2 = math.ceil(after_conv1 / 2)
+decoder_out = after_conv2 * 4
+crop_amount = decoder_out - INPUT_DIM
+
 model = keras.Sequential(
     [
-        layers.Reshape((x_np.shape[1], 1), input_shape=(x_np.shape[1],)),
+        layers.Reshape((INPUT_DIM, 1), input_shape=(INPUT_DIM,)),
         layers.Conv1D(
             filters=32,
             kernel_size=7,
@@ -110,6 +119,8 @@ model = keras.Sequential(
             activation="relu",
         ),
         layers.Conv1DTranspose(filters=1, kernel_size=7, padding="same"),
+        # Crop output to match original input dimension (handles rounding from stride=2)
+        layers.Cropping1D(cropping=(0, crop_amount)),
     ]
 )
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="mse")
