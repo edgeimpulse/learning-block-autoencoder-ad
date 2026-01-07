@@ -41,8 +41,8 @@ tf.random.set_seed(RANDOM_SEED)
 # Load files
 parser = argparse.ArgumentParser(description='Running custom Keras models in Edge Impulse')
 parser.add_argument('--data-directory', type=str, required=False, default='data')
-parser.add_argument('--epochs', type=int, required=False)
-parser.add_argument('--learning-rate', type=float, required=False)
+parser.add_argument('--epochs', type=int, required=False, default=50)
+parser.add_argument('--learning-rate', type=float, required=False, default=0.001)
 parser.add_argument('--out-directory', type=str, required=False, default='out')
 
 args, unknown = parser.parse_known_args()
@@ -123,13 +123,13 @@ model = keras.Sequential(
         layers.Cropping1D(cropping=(0, crop_amount)),
     ]
 )
-model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="mse")
+model.compile(optimizer=keras.optimizers.Adam(learning_rate=args.learning_rate), loss="mse")
 model.summary()
 
 model.fit(
     x_train,
     x_train,
-    epochs=50,
+    epochs=args.epochs,
     batch_size=128,
     validation_split=0.1,
     callbacks=[
