@@ -44,6 +44,7 @@ parser.add_argument('--data-directory', type=str, required=False, default='data'
 parser.add_argument('--epochs', type=int, required=False, default=50)
 parser.add_argument('--learning-rate', type=float, required=False, default=0.001)
 parser.add_argument('--out-directory', type=str, required=False, default='out')
+parser.add_argument('--early-stopping-patience', type=int, required=False, default=5)
 
 args, unknown = parser.parse_known_args()
 
@@ -133,7 +134,7 @@ model.fit(
     batch_size=128,
     validation_split=0.1,
     callbacks=[
-        keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min")
+        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min")
     ],
 )
 

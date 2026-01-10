@@ -10,7 +10,7 @@
     "parameters": [
         {
             "name": "Number of training cycles",
-            "value": "30",
+            "value": "50",
             "type": "int",
             "help": "Number of epochs to train the neural network on.",
             "param": "epochs"
@@ -21,6 +21,13 @@
             "type": "float",
             "help": "How fast the neural network learns, if the network overfits quickly, then lower the learning rate.",
             "param": "learning-rate"
+        },
+        {
+            "name": "Early stopping patience",
+            "value": "0",
+            "type": "int",
+            "help": "How many epochs to wait before stopping the training if the validation loss does not improve. If 0, early stopping is disabled.",
+            "param": "early-stopping-patience"
         }
     ]
 }
