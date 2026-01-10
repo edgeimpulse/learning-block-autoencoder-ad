@@ -19,7 +19,6 @@ class AnomalyScoreLayer(layers.Layer):
         # Compute MAE between original and reconstruction
         mae = tf.reduce_mean(tf.abs(original - reconstruction), axis=[1, 2])
         # Compute anomaly score as ratio of MAE to threshold
-        # Score > 1.0 means anomaly, < 1.0 means normal
         anomaly_score = mae / self.threshold
         return anomaly_score
 
@@ -52,34 +51,20 @@ if not os.path.exists(args.out_directory):
     os.mkdir(args.out_directory)
 
 # grab train/test set and convert into TF Dataset
-x_np = np.load(os.path.join(args.data_directory, 'X_split_train.npy'), mmap_mode='r')
-# X_test = np.load(os.path.join(args.data_directory, 'X_split_test.npy'), mmap_mode='r')
-
-
-# Normalize in Studio instead
-# # Normalize and save the mean and std we get,
-# # for normalizing test data.
-# training_mean = X_train.mean()
-# training_std = X_train.std()
-# X_train = (X_train - training_mean) / training_std
-# print("Number of training samples:", len(X_train))
-
-x_train = x_np
+x_train = np.load(os.path.join(args.data_directory, 'X_split_train.npy'), mmap_mode='r')
+x_test = np.load(os.path.join(args.data_directory, 'X_split_test.npy'), mmap_mode='r')
 
 # print GPU/CPU info
 print('Training on:', 'gpu' if len(tf.config.list_physical_devices('GPU')) > 0 else 'cpu')
 print('')
 
-# place to put callbacks (e.g. to MLFlow or Weights & Biases)
-callbacks = []
 
-
-print("Training input shape: ", x_np.shape)
+print("Training input shape: ", x_train.shape)
 
 # model architecture
 # Calculate cropping needed: with two stride=2 layers, output may be larger than input
 # due to ceiling division. Crop the excess from the end to match original input size.
-INPUT_DIM = x_np.shape[1]
+INPUT_DIM = x_train.shape[1]
 # Compute decoder output size: encoder does ceil(ceil(n/2)/2), decoder multiplies by 4
 after_conv1 = math.ceil(INPUT_DIM / 2)
 after_conv2 = math.ceil(after_conv1 / 2)
@@ -132,7 +117,7 @@ model.fit(
     x_train,
     epochs=args.epochs,
     batch_size=128,
-    validation_split=0.1,
+    validation_data=(x_test, x_test),
     callbacks=[
         keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min")
     ],
@@ -147,19 +132,19 @@ x_train_pred = model.predict(x_train)
 train_mae_loss = np.mean(np.abs(x_train_pred.squeeze(-1) - x_train), axis=1)
 
 # Get reconstruction loss threshold.
+# I'm dividing the reconstruction MAE by this mean from training to sort of normalize the anomaly score.
 threshold = np.max(train_mae_loss)
 print("Reconstruction error threshold: ", threshold)
 
 # Create a new model with the anomaly score layer baked in
 # Use batch_size=1 to ensure static tensor shapes for TFLite delegate compatibility
-input_layer = layers.Input(shape=(x_np.shape[1],), batch_size=1, name='input')
-reshaped_input = layers.Reshape((x_np.shape[1], 1))(input_layer)
+input_layer = layers.Input(shape=(x_train.shape[1],), batch_size=1, name='input')
+reshaped_input = layers.Reshape((x_train.shape[1], 1))(input_layer)
 reconstruction = model(reshaped_input)
 anomaly_score = AnomalyScoreLayer(threshold=float(threshold), name='anomaly_score')([reshaped_input, reconstruction])
 output = layers.Reshape((1,))(anomaly_score)
 
 # Final model outputs a single anomaly score per sample
-# Score > 1.0 indicates anomaly, < 1.0 indicates normal
 final_model = keras.Model(inputs=input_layer, outputs=output)
 final_model.summary()
 
