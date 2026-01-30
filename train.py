@@ -42,6 +42,8 @@ parser = argparse.ArgumentParser(description='Running custom Keras models in Edg
 parser.add_argument('--data-directory', type=str, required=False, default='data')
 parser.add_argument('--epochs', type=int, required=False, default=50)
 parser.add_argument('--learning-rate', type=float, required=False, default=0.001)
+parser.add_argument('--kernel-size', type=int, required=False, default=7, choices=[3, 5, 7])
+parser.add_argument('--conv-layers', type=int, required=False, default=2, choices=range(1, 7))
 parser.add_argument('--out-directory', type=str, required=False, default='out')
 parser.add_argument('--early-stopping-patience', type=int, required=False, default=5)
 
@@ -61,54 +63,62 @@ print('')
 
 print("Training input shape: ", x_train.shape)
 
+KERNEL_SIZE = args.kernel_size
+CONV_LAYERS = args.conv_layers
+
 # model architecture
 # Calculate cropping needed: with two stride=2 layers, output may be larger than input
 # due to ceiling division. Crop the excess from the end to match original input size.
 INPUT_DIM = x_train.shape[1]
-# Compute decoder output size: encoder does ceil(ceil(n/2)/2), decoder multiplies by 4
-after_conv1 = math.ceil(INPUT_DIM / 2)
-after_conv2 = math.ceil(after_conv1 / 2)
-decoder_out = after_conv2 * 4
+# Compute decoder output size: encoder does repeated ceil(n/2), decoder multiplies by 2^CONV_LAYERS
+after_conv = INPUT_DIM
+for _ in range(CONV_LAYERS):
+    after_conv = math.ceil(after_conv / 2)
+decoder_out = after_conv * (2 ** CONV_LAYERS)
 crop_amount = decoder_out - INPUT_DIM
 
-model = keras.Sequential(
-    [
-        layers.Reshape((INPUT_DIM, 1), input_shape=(INPUT_DIM,)),
+# Encoder/decoder channel plan.
+# For CONV_LAYERS=2, this yields [32, 16] (matching the previous architecture).
+# For CONV_LAYERS>=3, this starts at 64 (e.g., [64, 32, 16, ...]).
+base_filters = 64 if CONV_LAYERS >= 3 else 32
+encoder_filters = [max(4, base_filters // (2 ** i)) for i in range(CONV_LAYERS)]
+
+model_layers = [layers.Reshape((INPUT_DIM, 1), input_shape=(INPUT_DIM,))]
+
+for i, filters in enumerate(encoder_filters):
+    model_layers.append(
         layers.Conv1D(
-            filters=32,
-            kernel_size=7,
+            filters=filters,
+            kernel_size=KERNEL_SIZE,
             padding="same",
             strides=2,
             activation="relu",
-        ),
-        layers.Dropout(rate=0.2),
-        layers.Conv1D(
-            filters=16,
-            kernel_size=7,
-            padding="same",
-            strides=2,
-            activation="relu",
-        ),
+        )
+    )
+    if i == 0:
+        model_layers.append(layers.Dropout(rate=0.2))
+
+# Mirror decoder: same number of upsampling transposed convs as encoder convs
+for i, filters in enumerate(reversed(encoder_filters)):
+    model_layers.append(
         layers.Conv1DTranspose(
-            filters=16,
-            kernel_size=7,
+            filters=filters,
+            kernel_size=KERNEL_SIZE,
             padding="same",
             strides=2,
             activation="relu",
-        ),
-        layers.Dropout(rate=0.2),
-        layers.Conv1DTranspose(
-            filters=32,
-            kernel_size=7,
-            padding="same",
-            strides=2,
-            activation="relu",
-        ),
-        layers.Conv1DTranspose(filters=1, kernel_size=7, padding="same"),
-        # Crop output to match original input dimension (handles rounding from stride=2)
-        layers.Cropping1D(cropping=(0, crop_amount)),
-    ]
-)
+        )
+    )
+    if i == 0:
+        model_layers.append(layers.Dropout(rate=0.2))
+
+# Final reconstruction layer (no upsampling): total Conv1DTranspose layers = CONV_LAYERS + 1
+model_layers.append(layers.Conv1DTranspose(filters=1, kernel_size=KERNEL_SIZE, padding="same"))
+
+# Crop output to match original input dimension (handles rounding from stride=2)
+model_layers.append(layers.Cropping1D(cropping=(0, crop_amount)))
+
+model = keras.Sequential(model_layers)
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=args.learning_rate), loss="mse")
 model.summary()
 

@@ -23,6 +23,20 @@
             "param": "learning-rate"
         },
         {
+            "name": "Kernel size",
+            "value": "7",
+            "type": "int",
+            "help": "Convolution kernel size. Allowed values: 3, 5, or 7.",
+            "param": "kernel-size"
+        },
+        {
+            "name": "Convolutional layers",
+            "value": "2",
+            "type": "int",
+            "help": "Number of Conv1D layers in the encoder. The decoder will use the same number of Conv1DTranspose layers plus one final reconstruction layer (total = N + 1).",
+            "param": "conv-layers"
+        },
+        {
             "name": "Early stopping patience",
             "value": "0",
             "type": "int",

@@ -38,13 +38,13 @@ indices = []
 for i in range(len(data) - window_size + 1):
     window = data_normalized[i : i + window_size]
     # Reshape to match model input: (1, window_size, 1)
-    input_data = window.reshape(1, window_size, 1).astype(np.float32)
+    input_data = window.reshape(1, window_size).astype(np.float32)
 
     interpreter.set_tensor(input_details[0]["index"], input_data)
     interpreter.invoke()
     output = interpreter.get_tensor(output_details[0]["index"])
 
-    anomaly_scores.append(output[0, 0, 0])
+    anomaly_scores.append(output[0, 0])
     indices.append(i + window_size - 1)  # Index of the last sample in window
 
 anomaly_scores = np.array(anomaly_scores)
