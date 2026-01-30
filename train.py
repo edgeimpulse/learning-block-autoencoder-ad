@@ -95,8 +95,7 @@ for i, filters in enumerate(encoder_filters):
             activation="relu",
         )
     )
-    if i == 0:
-        model_layers.append(layers.Dropout(rate=0.2))
+    model_layers.append(layers.BatchNormalization())
 
 # Mirror decoder: same number of upsampling transposed convs as encoder convs
 for i, filters in enumerate(reversed(encoder_filters)):
@@ -109,8 +108,7 @@ for i, filters in enumerate(reversed(encoder_filters)):
             activation="relu",
         )
     )
-    if i == 0:
-        model_layers.append(layers.Dropout(rate=0.2))
+    model_layers.append(layers.BatchNormalization())
 
 # Final reconstruction layer (no upsampling): total Conv1DTranspose layers = CONV_LAYERS + 1
 model_layers.append(layers.Conv1DTranspose(filters=1, kernel_size=KERNEL_SIZE, padding="same"))
