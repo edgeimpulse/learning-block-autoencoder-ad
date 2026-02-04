@@ -54,7 +54,9 @@ if not os.path.exists(args.out_directory):
 
 # grab train/test set and convert into TF Dataset
 x_train = np.load(os.path.join(args.data_directory, 'X_split_train.npy'), mmap_mode='r')
-x_test = np.load(os.path.join(args.data_directory, 'X_split_test.npy'), mmap_mode='r')
+
+# At time of publish, X_split_test is written, but with 0 samples
+# x_test = np.load(os.path.join(args.data_directory, 'X_split_test.npy'), mmap_mode='r')
 
 # print GPU/CPU info
 print('Training on:', 'gpu' if len(tf.config.list_physical_devices('GPU')) > 0 else 'cpu')
@@ -62,6 +64,7 @@ print('')
 
 
 print("Training input shape: ", x_train.shape)
+# print("Testing input shape", x_test.shape) # Would be (0,x)
 
 KERNEL_SIZE = args.kernel_size
 CONV_LAYERS = args.conv_layers
@@ -120,12 +123,22 @@ model = keras.Sequential(model_layers)
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=args.learning_rate), loss="mse")
 model.summary()
 
+dataset_size = x_train.shape[0]
+if dataset_size < 10000:
+    validation_split = 0.2
+elif dataset_size < 1000000:
+    validation_split = 0.1
+else:
+    validation_split = 0.01
+
+print(f'Size is {dataset_size}, setting validation split to {validation_split}')
+
 model.fit(
     x_train,
-    x_train,
+    x_train, # Target matches for autoencoders
     epochs=args.epochs,
     batch_size=128,
-    validation_data=(x_test, x_test),
+    validation_split=validation_split,
     callbacks=[
         keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min")
     ],
