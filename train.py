@@ -142,7 +142,8 @@ model.fit(
     batch_size=128,
     validation_split=validation_split,
     callbacks=[
-        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min")
+        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min"),
+        tf.keras.callbacks.TensorBoard(log_dir="/home/tensorboard_logs")
     ],
 )
 
