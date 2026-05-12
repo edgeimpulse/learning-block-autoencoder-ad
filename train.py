@@ -98,7 +98,8 @@ for i, filters in enumerate(encoder_filters):
             activation="relu",
         )
     )
-    model_layers.append(layers.BatchNormalization())
+    if i < CONV_LAYERS - 1:  # No dropout after last encoder layer
+        model_layers.append(layers.Dropout(0.2))
 
 # Mirror decoder: same number of upsampling transposed convs as encoder convs
 for i, filters in enumerate(reversed(encoder_filters)):
@@ -111,7 +112,8 @@ for i, filters in enumerate(reversed(encoder_filters)):
             activation="relu",
         )
     )
-    model_layers.append(layers.BatchNormalization())
+    if i != 0:
+        model_layers.append(layers.Dropout(0.2))
 
 # Final reconstruction layer (no upsampling): total Conv1DTranspose layers = CONV_LAYERS + 1
 model_layers.append(layers.Conv1DTranspose(filters=1, kernel_size=KERNEL_SIZE, padding="same"))
@@ -140,7 +142,8 @@ model.fit(
     batch_size=128,
     validation_split=validation_split,
     callbacks=[
-        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min")
+        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min"),
+        tf.keras.callbacks.TensorBoard(log_dir="/home/tensorboard_logs")
     ],
 )
 
