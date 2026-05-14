@@ -2,7 +2,7 @@
     "version": 1,
     "type": "machine-learning",
     "info": {
-        "name": "1D convolutional autoencoder",
+        "name": "1D Convolutional Autoencoder",
         "description": "A 1D convolutional autoencoder based anomaly detection model for time-series data. Use with the Raw data processing block.",
         "operatesOn": "anomaly_detection",
         "indRequiresGpu": false
