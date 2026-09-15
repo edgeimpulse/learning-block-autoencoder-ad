@@ -1,12 +1,10 @@
 import argparse, os, sys, random, logging, math
 import numpy as np
 import pandas as pd
-import keras
 import tensorflow as tf
-from keras import layers
+from conversion import save_saved_model
 
-
-class AnomalyScoreLayer(layers.Layer):
+class AnomalyScoreLayer(tf.keras.layers.Layer):
     """Custom layer that computes anomaly score by comparing reconstruction error to threshold."""
 
     def __init__(self, threshold=0.0, **kwargs):
@@ -86,11 +84,11 @@ crop_amount = decoder_out - INPUT_DIM
 base_filters = 64 if CONV_LAYERS >= 3 else 32
 encoder_filters = [max(4, base_filters // (2 ** i)) for i in range(CONV_LAYERS)]
 
-model_layers = [layers.Reshape((INPUT_DIM, 1), input_shape=(INPUT_DIM,))]
+model_layers = [tf.keras.layers.Reshape((INPUT_DIM, 1), input_shape=(INPUT_DIM,))]
 
 for i, filters in enumerate(encoder_filters):
     model_layers.append(
-        layers.Conv1D(
+        tf.keras.layers.Conv1D(
             filters=filters,
             kernel_size=KERNEL_SIZE,
             padding="same",
@@ -99,12 +97,12 @@ for i, filters in enumerate(encoder_filters):
         )
     )
     if i < CONV_LAYERS - 1:  # No dropout after last encoder layer
-        model_layers.append(layers.Dropout(0.2))
+        model_layers.append(tf.keras.layers.Dropout(0.2))
 
 # Mirror decoder: same number of upsampling transposed convs as encoder convs
 for i, filters in enumerate(reversed(encoder_filters)):
     model_layers.append(
-        layers.Conv1DTranspose(
+        tf.keras.layers.Conv1DTranspose(
             filters=filters,
             kernel_size=KERNEL_SIZE,
             padding="same",
@@ -113,16 +111,16 @@ for i, filters in enumerate(reversed(encoder_filters)):
         )
     )
     if i != 0:
-        model_layers.append(layers.Dropout(0.2))
+        model_layers.append(tf.keras.layers.Dropout(0.2))
 
 # Final reconstruction layer (no upsampling): total Conv1DTranspose layers = CONV_LAYERS + 1
-model_layers.append(layers.Conv1DTranspose(filters=1, kernel_size=KERNEL_SIZE, padding="same"))
+model_layers.append(tf.keras.layers.Conv1DTranspose(filters=1, kernel_size=KERNEL_SIZE, padding="same"))
 
 # Crop output to match original input dimension (handles rounding from stride=2)
-model_layers.append(layers.Cropping1D(cropping=(0, crop_amount)))
+model_layers.append(tf.keras.layers.Cropping1D(cropping=(0, crop_amount)))
 
-model = keras.Sequential(model_layers)
-model.compile(optimizer=keras.optimizers.Adam(learning_rate=args.learning_rate), loss="mse")
+model = tf.keras.Sequential(model_layers)
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=args.learning_rate), loss="mse")
 model.summary()
 
 dataset_size = x_train.shape[0]
@@ -142,7 +140,7 @@ model.fit(
     batch_size=128,
     validation_split=validation_split,
     callbacks=[
-        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min"),
+        tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min"),
         tf.keras.callbacks.TensorBoard(log_dir="/home/tensorboard_logs")
     ],
 )
@@ -162,18 +160,15 @@ print("Reconstruction error threshold: ", threshold)
 
 # Create a new model with the anomaly score layer baked in
 # Use batch_size=1 to ensure static tensor shapes for TFLite delegate compatibility
-input_layer = layers.Input(shape=(x_train.shape[1],), batch_size=1, name='input')
-reshaped_input = layers.Reshape((x_train.shape[1], 1))(input_layer)
+input_layer = tf.keras.layers.Input(shape=(x_train.shape[1],), batch_size=1, name='input')
+reshaped_input = tf.keras.layers.Reshape((x_train.shape[1], 1))(input_layer)
 reconstruction = model(reshaped_input)
 anomaly_score = AnomalyScoreLayer(threshold=float(threshold), name='anomaly_score')([reshaped_input, reconstruction])
-output = layers.Reshape((1,))(anomaly_score)
+output = tf.keras.layers.Reshape((1,))(anomaly_score)
 
 # Final model outputs a single anomaly score per sample
-final_model = keras.Model(inputs=input_layer, outputs=output)
+final_model = tf.keras.Model(inputs=input_layer, outputs=output)
 final_model.summary()
 
 # Save the model to disk
-converter = tf.lite.TFLiteConverter.from_keras_model(final_model)
-tflite_model = converter.convert()
-with open(os.path.join(args.out_directory, 'model.tflite'), 'wb') as f:
-    f.write(tflite_model)
+save_saved_model(model, args.out_directory)

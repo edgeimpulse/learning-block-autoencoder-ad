@@ -7,6 +7,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # https://stackoverflow.com/questions/43147983/could-not-create-cudnn-handle-cudnn-status-internal-error
 ENV TF_FORCE_GPU_ALLOW_GROWTH=true
+# Ensure we can output a valid Keras SavedModel (not a TF one)
+ENV TF_USE_LEGACY_KERAS=1
 
 # Copy the rest of your training scripts in
 COPY . ./
