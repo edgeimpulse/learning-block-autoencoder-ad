@@ -174,7 +174,6 @@ final_model.summary()
 
 # Save the model to disk
 converter = tf.lite.TFLiteConverter.from_keras_model(final_model)
-converter.experimental_new_converter = False  # Use legacy converter for older op versions
 tflite_model = converter.convert()
 with open(os.path.join(args.out_directory, 'model.tflite'), 'wb') as f:
     f.write(tflite_model)

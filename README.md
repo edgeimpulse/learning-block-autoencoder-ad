@@ -31,50 +31,85 @@ $ edge-impulse-blocks push
 
 ## Local pipeline integration
 
-You can run this pipeline locally with Docker. This encapsulates all dependencies and packages for you. 
+You can run this pipeline locally with Docker. This encapsulates all dependencies and packages for you.
 
 Following the steps below will train the model and create a saved model ZIP file in the `out` directory.
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 2. Install the [Edge Impulse CLI](https://docs.edgeimpulse.com/tools/clis/edge-impulse-cli/installation)
 3. Create a new Edge Impulse project and add data
-4. Under Create impulse add a Raw data processing block and any anomaly detection learning block
-5. Clone this repo
-6. Change into the block directory
-7. Initialize the block:
+4. Under **Create impulse** add a 'Raw data' processing block, and the "Anomaly detection" (without K-means / GMM).
+5. Open a command prompt or terminal window.
+6. Initialize the block:
 
-```
-$ edge-impulse-blocks init --clean
-```
+    ```bash
+    $ edge-impulse-blocks init --clean
+    ```
 
-6. Fetch new data:
+7. Fetch new data via:
 
-```
-$ edge-impulse-blocks runner --download-data data/
-```
+    ```bash
+    $ edge-impulse-blocks runner --download-data data/
+    ```
 
-7. Build the container:
+8. Build the container:
 
-```
-$ docker build -t custom-ml-autoencoder-ad .
-```
+    ```bash
+    $ docker build -t custom-ml-autoencoder-ad .
+    ```
 
-8. Run the container:
+9. Run the container to test the script (you don't need to rebuild the container if you make changes):
 
-_macOS / Linux_
+    **macOS, Linux**
 
-```
-$ docker run --rm -v $PWD:/app custom-ml-autoencoder-ad --data-directory /app/data --epochs 50 --learning-rate 0.001 --out-directory out/
-```
+    ```bash
+    $ docker run --rm -v $PWD:/app custom-ml-autoencoder-ad --data-directory /app/data --epochs 50 --learning-rate 0.001 --out-directory out/
+    ```
 
-_Windows (Command prompt)_
+    **Windows (Command prompt)**
 
-```
-$ docker run --rm -v "%cd%":/app custom-ml-autoencoder-ad --data-directory /app/data --epochs 50 --learning-rate 0.001 --out-directory out/
-```
+    ```bash
+    $ docker run --rm -v "%cd%":/app custom-ml-autoencoder-ad --data-directory /app/data --epochs 50 --learning-rate 0.001 --out-directory out/
+    ```
 
-_Windows (Powershell)_
+    **Windows (Powershell)**
 
-```
-$ docker run --rm -v ${PWD}$:/app custom-ml-autoencoder-ad --data-directory /app/data --epochs 50 --learning-rate 0.001 --out-directory out/
-```
+    ```bash
+    $ docker run --rm -v ${PWD}$:/app custom-ml-autoencoder-ad --data-directory /app/data --epochs 50 --learning-rate 0.001 --out-directory out/
+    ```
+
+    > **Training on GPU:** If you're on an x86 machine with an Nvidia GPU, you can pass `--gpus=all` (right after `docker run`) to train on GPU.
+
+10. This creates a TFLite file in the 'out' directory.
+
+#### Adding extra dependencies
+
+If you have extra packages that you want to install within the container, add them to `requirements.txt` and rebuild the container.
+
+#### Adding new arguments
+
+To add new arguments, see [Custom learning blocks > Arguments to your script](https://docs.edgeimpulse.com/docs/edge-impulse-studio/learning-blocks/adding-custom-learning-blocks#arguments-to-your-script).
+
+## Fetching new data
+
+To get up-to-date data from your project:
+
+1. Install the [Edge Impulse CLI](https://docs.edgeimpulse.com/docs/edge-impulse-cli/cli-installation) v1.16 or higher.
+2. Open a command prompt or terminal window.
+3. Fetch new data via:
+
+    ```
+    $ edge-impulse-blocks runner --download-data data/
+    ```
+
+## Pushing the block back to Edge Impulse
+
+You can also push this block back to Edge Impulse, that makes it available like any other ML block so you can retrain your model when new data comes in, or deploy the model to device. See [Docs > Adding custom learning blocks](https://docs.edgeimpulse.com/docs/edge-impulse-studio/organizations/adding-custom-transfer-learning-models) for more information.
+
+1. Push the block:
+
+    ```
+    $ edge-impulse-blocks push
+    ```
+
+2. The block is now available under any of your projects via **Create impulse > Add new learning block**.
