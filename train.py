@@ -15,7 +15,7 @@ class AnomalyScoreLayer(tf.keras.layers.Layer):
         # inputs is a tuple of (original_input, reconstruction)
         original, reconstruction = inputs
         # Compute MAE between original and reconstruction
-        mae = tf.reduce_mean(tf.abs(original - reconstruction), axis=[1, 2])
+        mae = tf.reduce_mean(tf.abs(original - reconstruction), axis=1)
         # Compute anomaly score as ratio of MAE to threshold
         anomaly_score = mae / self.threshold
         return anomaly_score
@@ -171,4 +171,4 @@ final_model = tf.keras.Model(inputs=input_layer, outputs=output)
 final_model.summary()
 
 # Save the model to disk
-save_saved_model(model, args.out_directory)
+save_saved_model(final_model, args.out_directory)
