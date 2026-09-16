@@ -52,7 +52,9 @@ indices = np.array(indices)
 
 print(f"Computed {len(anomaly_scores)} anomaly scores")
 print(f"Min score: {anomaly_scores.min():.4f}, Max score: {anomaly_scores.max():.4f}")
-print(f"Scores > 1.0 (anomalies): {(anomaly_scores > 1.0).sum()}")
+
+THRESHOLD = 10
+print(f"Scores > {THRESHOLD} (anomalies): {(anomaly_scores > THRESHOLD).sum()}")
 
 # Plot results
 fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
@@ -65,21 +67,22 @@ axes[0].grid(True, alpha=0.3)
 
 # Plot anomaly scores
 axes[1].plot(indices, anomaly_scores, color="#A23B72", linewidth=0.8)
-axes[1].axhline(y=1.0, color="#F18F01", linestyle="--", linewidth=1.5, label="Threshold (1.0)")
+axes[1].axhline(y=THRESHOLD, color="#F18F01", linestyle="--", linewidth=1.5, label=f"Threshold ({THRESHOLD})")
 axes[1].set_ylabel("Anomaly Score")
-axes[1].set_title("Anomaly Score (>1.0 = Anomaly)")
+axes[1].set_title(f"Anomaly Score (>{THRESHOLD} = Anomaly)")
 axes[1].legend()
 axes[1].grid(True, alpha=0.3)
 
 # Plot original with anomalies highlighted
 axes[2].plot(data, color="#2E86AB", linewidth=0.8, label="Normal")
 # Highlight anomalies
-anomaly_mask = anomaly_scores > 1.0
+anomaly_mask = anomaly_scores > THRESHOLD
 if anomaly_mask.any():
     anomaly_indices = indices[anomaly_mask]
+    offset = window_size/2
     axes[2].scatter(
-        anomaly_indices,
-        data[anomaly_indices],
+        anomaly_indices-int(window_size/2),
+        data[anomaly_indices-int(window_size/2)],
         color="#C73E1D",
         s=10,
         label="Anomaly",
@@ -93,7 +96,7 @@ axes[2].grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig("anomaly_detection_output.png", dpi=150, bbox_inches="tight")
-plt.show()
+# plt.show()
 
 print("\nPlot saved to anomaly_detection_output.png")
 

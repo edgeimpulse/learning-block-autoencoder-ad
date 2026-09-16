@@ -1,4 +1,9 @@
 import argparse, os, sys, random, logging, math
+
+# Force legacy Keras (tf_keras) so TFLiteConverter.from_keras_model works;
+# TF 2.16+ defaults to Keras 3, which the TFLite converter doesn't fully support.
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
 import numpy as np
 import pandas as pd
 import keras
