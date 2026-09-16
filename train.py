@@ -51,6 +51,7 @@ parser.add_argument('--kernel-size', type=int, required=False, default=7, choice
 parser.add_argument('--conv-layers', type=int, required=False, default=2, choices=range(1, 7))
 parser.add_argument('--out-directory', type=str, required=False, default='out')
 parser.add_argument('--early-stopping-patience', type=int, required=False, default=5)
+parser.add_argument('-t','--tensorboard-off', action='store_true')
 
 args, unknown = parser.parse_known_args()
 
@@ -140,16 +141,19 @@ else:
 
 print(f'Size is {dataset_size}, setting validation split to {validation_split}')
 
+callbacks = [
+    keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min"),
+]
+if not args.tensorboard_off:
+    callbacks.append(tf.keras.callbacks.TensorBoard(log_dir="/home/tensorboard_logs"))
+
 model.fit(
     x_train,
     x_train, # Target matches for autoencoders
     epochs=args.epochs,
     batch_size=128,
     validation_split=validation_split,
-    callbacks=[
-        keras.callbacks.EarlyStopping(monitor="val_loss", patience=args.early_stopping_patience, mode="min"),
-        tf.keras.callbacks.TensorBoard(log_dir="/home/tensorboard_logs")
-    ],
+    callbacks=callbacks,
 )
 
 print('')
