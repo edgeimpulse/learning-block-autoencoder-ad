@@ -27,10 +27,11 @@ RUN apt update && apt install -y curl zip git lsb-release software-properties-co
 # Install uv and Python 3.11
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 RUN uv python install 3.11
+ENV UV_LINK_MODE=copy
 
-# Copy Python requirements in and install them
-COPY requirements.txt ./
-RUN uv pip install --system -r requirements.txt
+# Copy Python project files in and install dependencies
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project
 
 # https://stackoverflow.com/questions/43147983/could-not-create-cudnn-handle-cudnn-status-internal-error
 ENV TF_FORCE_GPU_ALLOW_GROWTH=true
@@ -39,4 +40,4 @@ ENV TF_FORCE_GPU_ALLOW_GROWTH=true
 COPY . ./
 
 # And tell us where to run the pipeline
-ENTRYPOINT ["python3", "-u", "train.py"]
+ENTRYPOINT ["uv", "run", "python3", "-u", "train.py"]
