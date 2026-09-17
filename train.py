@@ -1,14 +1,14 @@
-import argparse, os, sys, random, logging, math
+import argparse, os, random, logging, math
 
 # Force legacy Keras (tf_keras) so TFLiteConverter.from_keras_model works;
 # TF 2.16+ defaults to Keras 3, which the TFLite converter doesn't fully support.
 os.environ['TF_USE_LEGACY_KERAS'] = '1'
 
 import numpy as np
-import pandas as pd
-import keras
+import tf_keras as keras
 import tensorflow as tf
-from keras import layers
+from conversion import save_saved_model
+from tf_keras import layers
 
 
 class AnomalyScoreLayer(layers.Layer):
@@ -22,7 +22,7 @@ class AnomalyScoreLayer(layers.Layer):
         # inputs is a tuple of (original_input, reconstruction)
         original, reconstruction = inputs
         # Compute MAE between original and reconstruction
-        mae = tf.reduce_mean(tf.abs(original - reconstruction), axis=[1, 2])
+        mae = tf.reduce_mean(tf.abs(original - reconstruction), axis=1)
         # Compute anomaly score as ratio of MAE to threshold
         anomaly_score = mae / self.threshold
         return anomaly_score
@@ -182,8 +182,4 @@ final_model = keras.Model(inputs=input_layer, outputs=output)
 final_model.summary()
 
 # Save the model to disk
-converter = tf.lite.TFLiteConverter.from_keras_model(final_model)
-converter.experimental_new_converter = False  # Use legacy converter for older op versions
-tflite_model = converter.convert()
-with open(os.path.join(args.out_directory, 'model.tflite'), 'wb') as f:
-    f.write(tflite_model)
+save_saved_model(final_model, args.out_directory)
